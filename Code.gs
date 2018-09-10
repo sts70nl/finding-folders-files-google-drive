@@ -21,10 +21,11 @@
 //
 // Use:
 // - copy/paste the script in a google drive spreadsheet
-// - fill in the folder Id (copy the part after /FOLDERS/:
+// - select a sheet
+// - paste the in cell A1 the folder Id  (copy the part after /FOLDERS/:
 //      example: https://drive.google.com/drive/u/0/folders/<THIS YOU NEED TO COPY>
-// - paste the Id below between quotes: e.g.  "0Badsfasdfasdfasdf"
-var parentFolder = "<your ID>"
+// - optionally change below number of ident spaces and/or time-out
+// to execute: runMe
 
 
 // put the number of indent space
@@ -35,12 +36,12 @@ var timeOut = 200000
 
 
 // this contains all the global variables used 
-var thisSpreadsheet = SpreadsheetApp.getActiveSpreadsheet()
-var targetSheet = thisSpreadsheet.getActiveSheet()
+var thisSpreadsheet
+var targetSheet
+var parentFolder
 var i = 0
 var j = 0
 var ident
-var numberOfSpaces = 4
 var spaces=''
 var fId
 var fIdent
@@ -65,11 +66,17 @@ function isTimeUp_(start) {
 }
 
 // the function that starts everything
-function run() {
+function runMe() {
+  thisSpreadsheet = SpreadsheetApp.getActiveSpreadsheet()
+  targetSheet = thisSpreadsheet.getActiveSheet()
+  parentFolder = targetSheet.getRange(1,1).getValue()
+  Logger.log(targetSheet.getName())
   start = new Date()
   init_()
   var temp = DriveApp.getFolderById(parentFolder)
   fName = temp.getName()
+  targetSheet.getRange(1,2).setValue(fName)
+  SpreadsheetApp.flush()
   fType = "Folder"
   fId = temp.getId()
   fUrl = temp.getUrl()
@@ -87,7 +94,7 @@ function run() {
 
 // when the script is finished, or a time-out is near, the output will be written in the spreadsheet
 function stopScript_() {
-  targetSheet.getRange(1, 1,output.length,output[0].length).setValues(output);
+  targetSheet.getRange(2, 1,output.length,output[0].length).setValues(output);
 }
 
 // this function sets the number of ident spaces and creates the header
@@ -136,7 +143,7 @@ function changeIdent_(x) {
 function listFolders_(id) {
   if (isTimeUp_(start)) {stopScript_()}
   var parent = DriveApp.getFolderById(id)
-  listFiles_(id)
+//  listFiles_(id)
   if(parent.getFolders().hasNext()) {
     changeIdent_(1)
     fFolders = parent.getFolders()
@@ -157,7 +164,12 @@ function getPeople_(id, type) {
     if (emails.length != "") {emails=emails+','} 
     emails = emails + people[k].getEmail()
   }
-  return emails
+  if(type == 'Editors') {
+    fEditors = emails
+  } else {
+    fViewers = emails
+  }
+  return
 }
   
 // this function finds all the files in a folder and gets the properties
@@ -173,8 +185,8 @@ function listFiles_(id) {
     fId = f.getId()
     fUrl= f.getUrl()
     fOwner = f.getOwner().getEmail()
-    fEditors = getPeople_(fId, 'Editors')
-    fViewers = getPeople_(fId, 'Viewers')
+    getPeople_(fId, 'Editors')
+    getPeople_(fId, 'Viewers')
     sharingAccess = f.getSharingAccess()
     sharingPermission = f.getSharingPermission()
     fIdent = ident+spaces
@@ -194,13 +206,16 @@ function listSubFolders_(folders) {
     fUrl= f.getUrl()
     fSize = f.getSize()
     fOwner = f.getOwner().getEmail()
-    fEditors = getPeople_(fId, 'Editors')
-    fViewers = getPeople_(fId, 'Viewers')
+    getPeople_(fId, 'Editors')
+    getPeople_(fId, 'Viewers')
     sharingAccess = f.getSharingAccess()
     sharingPermission = f.getSharingPermission()
     fIdent = ident
     addResults_()
-    listFolders_(fId)
+    listFiles_(id)
+    if(f.getFolders().hasNext()) {
+      listFolders_(fId)
+    }
   }
   changeIdent_(-1)
 }  
